@@ -1,8 +1,11 @@
 import 'package:flutter/widgets.dart';
-import '../models/product.dart';
+import './product.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Products with ChangeNotifier {
-  List<Product> _items = [Product(
+  List<Product> _items = [
+    Product(
       id: 'p1',
       title: 'Red Shirt',
       description: 'A red shirt - it is pretty red!',
@@ -36,17 +39,85 @@ class Products with ChangeNotifier {
     ),
   ];
 
-  List<Product> get items{
+  List<Product> get items {
     return [..._items];
   }
 
-  Product findById(String id)
-  {
-    return _items.firstWhere((item)=>item.id==id);
+  List<Product> get favoritesItems {
+    return _items.where((item) => item.isFavorite).toList();
   }
-  void addProduct()
-  {
+
+  Product findById(String id) {
+    return _items.firstWhere((item) => item.id == id);
+  }
+
+  Future<void> fetchAndSetProducts() async {
+    const url = 'https://fir-b45e5.firebaseio.com/products.json';
+
+    try {
+      final response = await http.get(url);
+
+      print(json.decode(response.body));
+      final extractedData = json.decode(response.body) as Map<String,dynamic>;
+      final List<Product> loadedData=[];
+      extractedData.forEach((prodid ,productData){
+        loadedData.add(Product(
+          id:prodid,
+          title: productData['title'],
+          description: productData['description'],
+          price: productData['price'],
+          imageUrl: productData['imageUrl'],
+          isFavorite: productData['isFavorite']
+        ));
+      });
+      _items = loadedData;
+      notifyListeners();
+    } catch (error) {
+      print(error);
+      throw error;
+    }
+  }
+
+  Future<void> addProduct(Product product) async {
+    const url = 'https://fir-b45e5.firebaseio.com/products.json';
+    try {
+      final response = await http.post(url,
+          body: json.encode({
+            'title': product.title,
+            'price': product.price,
+            'description': product.description,
+            'imageUrl': product.imageUrl,
+            'isFavorite': product.isFavorite,
+          }));
+      final newProduct = Product(
+          id: json.decode(response.body)['name'],
+          description: product.description,
+          price: product.price,
+          title: product.title,
+          imageUrl: product.imageUrl);
+      _items.add(newProduct);
+      notifyListeners();
+    } catch (error) {
+      print(error);
+      throw error;
+    }
+
+    //  .then((response) {});
+    // }).catchError((error){
+    //   print(error);
+    //   throw error;
+    // });
+  }
+
+  void updateProduct(String id, Product newProduct) {
+    final index = _items.indexWhere((prod) => prod.id == id);
+    print(newProduct.price);
+    _items[index] = newProduct;
     notifyListeners();
   }
 
+  void deleteProduct(String id) {
+    _items.removeWhere((p) => p.id == id);
+    notifyListeners();
+  }
 }
