@@ -30,7 +30,7 @@ dev_dependencies:
     sdk: flutter
   
   intl: ^0.16.0
-
+  shared_preferences: ^0.5.3+5
   http: ^0.12.0+3
 
 
